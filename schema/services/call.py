@@ -17,6 +17,11 @@ class CallBase(BaseModel):
 
 
 class CallPost(CallBase):
+    """
+    CallPost
+
+    Schema for POST request at any time to your call index/table
+    """
     from_: str
     call_status: str
 
