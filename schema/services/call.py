@@ -62,6 +62,9 @@ class FeedBackPut(FeedBackBase):
 
 #Lead
 class LeadIdentity(BaseModel):
+    """"
+    Schema for identifying lead on call in progress mode
+    """
     contact: str
     lead_id: str
 
