@@ -1,3 +1,5 @@
+from db import db_fetch
+
 def generate_id(n, is_alphanum=True):
     """
     generate a random ID of length n
@@ -21,3 +23,31 @@ def random_client_name(prefix="CLIENT"):
     """return randomly generated client name"""
     return f"Agent-{generate_id(5)}"
     
+def get_db_data_by_query(index=None, is_delete=0, *, search_parameter={}):
+    field_search, value = search_parameter.popitem()
+    query =  {
+        "query": {
+          "bool": {
+            "must": [
+              {
+                  "match_phrase": {
+                    f"{field_search}": f"{value}"
+                  }
+              },
+              {
+                  "match_phrase": {
+                    "is_delete": is_delete
+                  }
+              }
+              
+            ]
+          }
+        }
+    }  
+
+    account = db_fetch(index=index, query=query)
+
+    if account:
+        return account[0]
+    else:
+        return None
