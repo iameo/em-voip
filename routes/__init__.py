@@ -1,7 +1,7 @@
-from api.common.server.server import Index
-from api.common.emvoip.communication_api import Voice, TwilioToken
-from api.common.emvoip.external_number import RequestCountriesForExternalNumber
-from api.common.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail
+from api.server.server import Index
+from api.emvoip.communication_api import Voice, TwilioToken
+from api.emvoip.external_number import RequestCountriesForExternalNumber
+from api.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail
 
 from .restx_loader import ns
 # ------------ restx resources ------------
