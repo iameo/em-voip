@@ -9,8 +9,7 @@ from flask_restx import Api
 from config import Config
 from .__version__ import version
 
-
-from routes.ret import restx_api
+from routes.restx_loader import restx_api
 
 
 api = Api(version=f'{version}', title='VOIP API')
