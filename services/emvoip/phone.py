@@ -14,6 +14,9 @@ main_account_auth_token = os.getenv('TWILIO_AUTH_TOKEN')
 
 Client = TwilioClient(main_account_sid, main_account_auth_token)
 
+#------ index for db hits and saves
+phone_index = 'phone_repo'
+
 class Phone(object):
     @auth_checker
     def request_countries(self):
@@ -112,27 +115,52 @@ class Phone(object):
                 "voice": _record['capabilities']['voice']
             },
             "phone_number": _record.get('phone_number')
-        }
+        }, subclient
+
 
     def new_phone_detail(self, json_data: dict = None, company_id: str = None, user_id: str = None):
-        phone_record = self.allocate_number(area_code=json_data['area_code'], country=json_data['country'],\
+        phone_record, subclient = self.allocate_number(area_code=json_data['area_code'], country=json_data['country'],\
             company_id=company_id, user_id=user_id)
 
         if phone_record is None:
             return {'status':503, 'message': 'we could not allocate a phone number at this time'}
         
-        address_requirement = phone_record.get('address_requirments')
+        address_requirement = phone_record.get('address_requirements')
         if address_requirement == 'none':
-            self.instant_number_allocation()
+            phone_status = self.instant_number_allocation(json_data=json_data, company_id=company_id, user_id=user_id, twilio_client=subclient)
         
         else: #any, local, foreign
             message = f'Address of type {address_requirement} is required to proceed'
+            phone_status = None #todo
+        return phone_status
 
 
-    def instant_number_allocation(self, json_data=None, company_id=None, user_id=None):
+    def instant_number_allocation(self, json_data=None, company_id=None, user_id=None, twilio_client=None):
         label = 'Personal Number'
         
-        primary_number_availablity = ''
+        primary_number_availablity = db_fetch(index=phone_index, query={
+            'query': {
+                'bool': {
+                    'must': [
+                        {
+                            'match_phrase': {
+                                'is_primary': 1
+                            }
+                        },
+                        {
+                            'match_phrase': {
+                                'user_id': user_id
+                            }
+                        },
+                        {
+                            'match_phrase': {
+                                'is_delete': 0
+                            }
+                        }
+                    ]
+                }
+            }
+        })
 
         if primary_number_availablity:
             json_data['is_primary'] = 0
@@ -143,17 +171,9 @@ class Phone(object):
             label = 'Group Number'
             json_data['members'] = []
 
-        query = ''
+        twiml_app_sid = self.twiml_sid(twilio_client, company_id)
 
-        account = db_fetch(index='subaccounts', query=query)
-
-        if account:
-            account = account[0]
-        
-        subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
-        twiml_app_sid = self.twiml_sid(subclient, company_id)
-
-        number_provision = subclient.incoming_phone_numbers.create(
+        number_provision = twilio_client.incoming_phone_numbers.create(
             phone_number=json_data.get('phone_number'),
             voice_application_sid=str(twiml_app_sid)
         )
@@ -167,7 +187,7 @@ class Phone(object):
             "voice_greeting_url": ''
         })
 
-        data = db_save(index='phone_details', json_data=json_data, company_id=company_id, user_id=user_id)
+        data = db_save(index=phone_index, json_data=json_data, company_id=company_id, user_id=user_id)
         if not data:
             return {'status':500, 'messgae': 'we could not provision a phone number for you at this time.'}
         return {'status': 201, 'data':data, 'message': 'new phone number provisioned.'}
