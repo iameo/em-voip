@@ -193,6 +193,25 @@ class Phone(object):
         return {'status': 201, 'data':data, 'message': 'new phone number provisioned.'}
 
 
+    def add_address(self, json_data=None, twilio_client=None):
+        
+        address_details = twilio_client.addresses.create(
+            customer_name=json_data['customer_name'],
+            street=json_data['street'],
+            city=json_data['city'],
+            region=json_data['region'],
+            postal_code=json_data['postal_code'],
+            iso_country=json_data['country'] #iso
+        )
+
+        return address_details
+
+    @property
+    def addresses(self, twilio_client):
+        addresses = twilio_client.addresses.list()
+        return addresses
+
+
     @property
     def twiml_sid(self, subclient=None, company_id=None):
         applications = subclient.applications.list(friendly_name=f"{company_id}_TWIML_APP", limit=1)
