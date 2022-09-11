@@ -51,16 +51,19 @@ class TwilioCommClient(object):
         self.account_id = account_id
         self.user_id = user_id
 
-        self.account = get_account(lookup={'ff':'vv'})
+        self.account = get_account(lookup={'account_id':self.account_id})
         self.subclient = initialize_client()
 
+    @property
     def fetch_twilio_secrets(self):
         subclient = self.subclient()
 
         key_secret = subclient.new_keys.create(
             friendly_name=f'{self.account_id}[:15]__{self.user_id}[5]'
         )
-    
+
+        return key_secret
+        
     def get_twilio_token(self):
         identity = ''
         twilio_secrets = self.fetch_twilio_secrets()
