@@ -2,6 +2,8 @@ from api.server.server import Index
 from api.emvoip.communication_api import Voice, TwilioToken
 from api.emvoip.external_number import RequestCountriesForExternalNumber
 from api.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail
+from api.common.user_api import AllowLogin
+
 
 from .restx_loader import ns
 # ------------ restx resources ------------
@@ -13,6 +15,9 @@ ns.add_resource(Index, '/')
 #twilio token
 ns.add_resource(TwilioToken, '/twilio/token')
 # -- end of twilio token routes
+
+#login - api access for authorization header
+ns.add_resource(AllowLogin, '/login')
 
 #voice twiml
 ns.add_resource(Voice, '/voice')
