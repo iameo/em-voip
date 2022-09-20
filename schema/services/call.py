@@ -35,6 +35,18 @@ class CallLogPut(CallLogPost):
     pass
 
 
+
+#Coaching - primiliary
+class CoachingBase(CallBase):
+    to: Optional[str] = None
+    call_sid: str
+    to_coach: str
+
+
+class CoachingPost(CoachingBase):
+    pass
+
+
 #Feedback on Call
 
 class FeedBackBase(BaseModel):
@@ -73,6 +85,7 @@ class LeadIdentity(BaseModel):
 call_post = CallPost()
 call_log_post = CallLogPost()
 call_log_put = CallLogPut()
+call_coaching_post = CoachingPost()
 feedback_post = FeedBackPost()
 feedback_put = FeedBackPut()
 lead_identity = LeadIdentity()
