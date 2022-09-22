@@ -3,6 +3,7 @@ from api.emvoip.voice_communication_api import Voice, TwilioToken
 from api.emvoip.external_number import RequestCountriesForExternalNumber
 from api.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail
 from api.common.user_api import AllowLogin
+from api.server.server import Twilio
 
 
 from .restx_loader import ns
@@ -33,6 +34,9 @@ ns.add_resource(PhoneRequestPricing, '/pricing')
 ns.add_resource(PhoneDetail, '/number')
 # --- end of phone detailing routes
 
+
+#index
+ns.add_resource(Twilio, '/voip_home')
 
 
 
