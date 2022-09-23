@@ -1,6 +1,6 @@
 from typing import List, Optional
-from pydantic import BaseModel
-
+from pydantic import BaseModel, validator
+from services.middlewares.common import clean_payload
 
 class CallBase(BaseModel):
     """
@@ -14,7 +14,10 @@ class CallBase(BaseModel):
     """
     direction: str
     to: str
-
+    
+    @validator("*", pre=True)
+    def clean(cls, value):
+        return clean_payload(value)
 
 class CallPost(CallBase):
     """
@@ -42,6 +45,9 @@ class CoachingBase(CallBase):
     call_sid: str
     to_coach: str
 
+    @validator("*", pre=True)
+    def clean(cls, value):
+        return clean_payload(value)
 
 class CoachingPost(CoachingBase):
     pass
@@ -64,6 +70,11 @@ class FeedBackBase(BaseModel):
     issues: List[str]
     message: Optional[str]
 
+    @validator("*", pre=True)
+    def clean(cls, value):
+        return clean_payload(value)
+
+
 class FeedBackPost(FeedBackBase):
     call_sid: str
 
@@ -80,6 +91,9 @@ class LeadIdentity(BaseModel):
     contact: str
     lead_id: str
 
+    @validator("*", pre=True)
+    def clean(cls, value):
+        return clean_payload(value)
 
 ##### arbitary loading
 call_post = CallPost()
