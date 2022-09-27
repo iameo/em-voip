@@ -1,5 +1,5 @@
 from api.server.server import Index
-from api.emvoip.voice_communication_api import Voice, TwilioToken
+from api.emvoip.voice_communication_api import EndCall, HandleCall, Voice, TwilioToken
 from api.emvoip.external_number import RequestCountriesForExternalNumber
 from api.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail
 from api.common.user_api import AllowLogin
@@ -20,8 +20,15 @@ ns.add_resource(TwilioToken, '/twilio/token')
 #login - api access for authorization header
 ns.add_resource(AllowLogin, '/login')
 
-#voice twiml
+#voice twiml - initiates calling system
 ns.add_resource(Voice, '/voice')
+
+#handle call
+ns.add_resource(HandleCall, '/call/handle')
+
+#end call
+ns.add_resource(EndCall, 'call/end')
+
 # -- end of voice twiml routes
 
 #external number routes
