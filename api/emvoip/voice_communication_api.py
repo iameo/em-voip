@@ -21,7 +21,7 @@ def twilio_init(include_identity=False, block_twilio_client=False):
 
 class TwilioToken(Resource):
     def get(self):
-        twilio_client, identity = twilio_init(throw_identity=True)
+        twilio_client, identity = twilio_init(include_identity=True)
         token =  twilio_client.get_twilio_token(identity=identity)
         return response_model(response=token, allow_only_data=True)
 
