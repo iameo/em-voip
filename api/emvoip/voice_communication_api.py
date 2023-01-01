@@ -43,8 +43,9 @@ class HandleCall(Resource):
 
 
 class EndCall(Resource):
-    def post():
-        """ resource to end ongoing call
+    def post(self):
+        """ 
+        resource to end ongoing call
     
         initialize VoiceResponse
         hangup on the instance
