@@ -38,7 +38,7 @@ def allow_login(json_data):
             return data
     
     else:
-        return {"data":{}, "message":"ailed"}
+        return {"data":{}, "message":"failed"}
 
 class AllowLogin(Resource):
     def post(self):
