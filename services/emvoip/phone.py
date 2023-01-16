@@ -19,6 +19,11 @@ phone_index = 'phone_repo'
 
 class Phone(object):
     @auth_checker
+    def purchased_numbers(self, n=None):
+        numbers = Client.incoming_phone_numbers.list(limit=n)
+        return {'numbers': c.phone_number for c in numbers}
+
+    @auth_checker
     def request_countries(self):
         countries = Client.available_phone_numbers.list()
 
