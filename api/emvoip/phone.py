@@ -30,5 +30,11 @@ class PhoneDetail(Resource):
         response = phone_api.new_phone_detail(json_data=json_data, user_id='', company_id='')
         return response_model(response)
 
+class PurchasedNumbers(Resource):
+    def get(self):
+        '''view all purchased numbers'''
+        n = request.get_json()['limit']
+        purchased_numbers = phone_api.purchased_numbers(n)
+        return response_model(response=purchased_numbers, allow_only_data=True)
 
 
