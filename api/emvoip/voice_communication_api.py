@@ -20,6 +20,7 @@ def twilio_init(include_identity=False, block_twilio_client=False):
 
 
 class TwilioToken(Resource):
+    @route_protector(None)
     def get(self):
         twilio_client, identity = twilio_init(include_identity=True)
         token =  twilio_client.get_twilio_token(identity=identity)
