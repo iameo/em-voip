@@ -1,5 +1,6 @@
 from api.server.server import Index
 from api.emvoip.voice_communication_api import EndCall, HandleCall, Voice, TwilioToken
+from api.emvoip.sms import SendSMS
 from api.emvoip.external_number import RequestCountriesForExternalNumber
 from api.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail, PurchasedNumbers
 from api.common.user_api import AllowLogin, AllowRegister
@@ -29,9 +30,18 @@ ns.add_resource(Voice, '/voice')
 ns.add_resource(HandleCall, '/call/handle')
 
 #end call
-ns.add_resource(EndCall, 'call/end')
+ns.add_resource(EndCall, '/call/end')
+
 
 # -- end of voice twiml routes
+
+
+
+# --- start of sms routes
+ns.add_resource(SendSMS, '/sms/send')
+
+# --- end of sms routes
+
 
 #external number routes
 ns.add_resource(RequestCountriesForExternalNumber,'/ext/countries')
@@ -46,7 +56,7 @@ ns.add_resource(PurchasedNumbers, '/purchased/numbers')
 
 
 #index
-ns.add_resource(Twilio, '/voip_home')
+ns.add_resource(Twilio, '/voip_home', endpoint='love')
 
 
 
