@@ -14,4 +14,5 @@ class Config(object):
 
     ALLOWED_SOCKET_ORIGINS = "*"
     DEBUG = os.getenv('DEBUG', False)
+    JWT_TOKEN_LOCATION = ['headers', 'query_string']
 
