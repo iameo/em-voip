@@ -10,25 +10,31 @@ from config import Config
 from .__version__ import version
 
 from routes.restx_loader import restx_api
+from flask_bcrypt import Bcrypt
 
+authorizations = {"Bearer": {"type": "apiKey", "in": "header", "name": "Authorization"}}
 
-api = Api(version=f'{version}', title='VOIP API')
+api = Api(version=f'{version}', title='VOIP API', authorizations=authorizations, doc='/ui')
 cors = CORS()
 jwt = JWTManager()
-socketio = SocketIO()
+socketio = SocketIO(cors_allowed_origins="*")
+bcrpyt = Bcrypt()
 
 
 
 def create_app(config_class=Config):
     app = Flask(__name__, template_folder='templates', static_folder='staticFiles')
     app.config.from_object(config_class)
+    app.config['CORS_HEADERS'] = 'application/json'
 
     #initialize packages
     cors.init_app(app)
-    jwt.init_app(app)
     socketio.init_app(app)
     # api.init_app(app)
     restx_api.init_app(app)
+    jwt.init_app(app)
+    bcrpyt.init_app(app)
+    # api.init_app(app)
 
 
     return app
