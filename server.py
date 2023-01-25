@@ -1,4 +1,9 @@
-from voip import create_app, socketio
+from voip import create_app
+from flask import render_template
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = create_app()
 
@@ -23,6 +28,16 @@ def get():
     resp.hangup()
     return Response(str(resp), mimetype='text/xml')
 
+
+@app.route('/voip/home', endpoint='home')
+def voip_home():
+  return render_template('index.html')
+
+@app.route('/login')
+def loginn():
+  return render_template('login.html')
+
+
 if __name__ == '__main__':
     # socketio.run(app, debug=True)
-    app.run(host='0.0.0.0', port=80, debug=True)
+    app.run(port=os.getenv('FLASK_PORT'), debug=os.getenv('FLASK_DEBUG'))
