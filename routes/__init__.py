@@ -2,9 +2,9 @@ from api.server.server import Index
 from api.emvoip.voice_communication_api import EndCall, HandleCall, Voice, TwilioToken
 from api.emvoip.sms import SendSMS
 from api.emvoip.external_number import RequestCountriesForExternalNumber
-from api.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail, PurchasedNumbers
+from api.emvoip.phone import PhoneRequestCountries, PhoneRequestPricing, PhoneDetail, PurchasedNumbers, Address
 from api.common.user_api import AllowLogin, AllowRegister
-from api.server.server import Twilio
+# from api.server.server import Twilio
 
 
 from .restx_loader import ns
@@ -56,7 +56,7 @@ ns.add_resource(PurchasedNumbers, '/purchased/numbers')
 
 
 #index
-ns.add_resource(Twilio, '/voip_home', endpoint='love')
 
 
-
+#address
+ns.add_resource(Address, '/addresses')
