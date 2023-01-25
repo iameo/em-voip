@@ -19,9 +19,22 @@ phone_index = 'phone_repo'
 
 class Phone(object):
     @auth_checker
-    def purchased_numbers(self, n=None):
-        numbers = Client.incoming_phone_numbers.list(limit=n)
-        return {'numbers': c.phone_number for c in numbers}
+    #this should be for the logged individual
+    def purchased_numbers(self, n=None, account_id=None):
+        try:
+            n = int(n)
+        except (ValueError, TypeError):
+            n = None
+
+        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
+        if account:
+            subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
+        else:
+            return {"msg": "you are yet to subscribe for a plan"}
+
+        numbers = subclient.incoming_phone_numbers.list(limit=n)
+        return {'numbers': c.phone_number for c in numbers} if numbers else {"numbers": []}
+
 
     @auth_checker
     def request_countries(self):
@@ -60,24 +73,29 @@ class Phone(object):
         return {'data': {}, 'status': 400}
 
 
-    def allocate_number(self, area_code, country, user_id, company_id):
+    def allocate_number(self, area_code, country, user_id, account_id):
         """
         Buy phone number and allocate twilio twiml url for voice calls
         """
-        account = get_db_data_by_query(index="subaccounts", search_parameter={"company_id":company_id})
+        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
 
         if account:
-            account = account[0]
+            account = account
         else:
             _ts = datetime.utcnow()
 
-            account = Client.api.accounts.create(
-                friendly_name=str(company_id)
+            try:
+                account = Client.api.accounts.create(
+                friendly_name=f'{account_id}'
             )
+            except TwilioRestException as e:
+                return {"msg": str(e)}
+            except TwilioException as e:
+                return {"msg": str(e)}
             subaccount_data = {
                 "_id": db_id_maker('subaccount'),
-                "account_name": account.name,
-                "company_id": company_id,
+                "account_name": account.friendly_name,
+                "account_id": account_id,
                 "status": 1 if account.status == 'active' else 0,
                 "subresource_uris": account.subresource_uris,
                 "twilio_status": account.status,
@@ -101,38 +119,42 @@ class Phone(object):
         
         subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
 
+
         if country and area_code:
             record = subclient.available_phone_numbers(country).local.list(area_code=area_code, limit=1)
-        
+
         if country and not area_code:
             record = subclient.available_phone_numbers(country).local.list(limit=1)
         
         try:
-            record = record['available_phone_numbers']
             _record = record[0]
         except (IndexError, KeyError):
             return None
-        return {
-            "address_requirements": _record.get('address_requirements'),
+
+        capabilities = _record.capabilities
+        number_data = {
+            "address_requirements": _record.address_requirements,
             "capabilities": {
-                "mms": _record['capabilities']['mms'],
-                "sms": _record['capabilities']['sms'],
-                "voice": _record['capabilities']['voice']
+                "mms": capabilities['MMS'],
+                "sms": capabilities['SMS'],
+                "voice": capabilities['voice']
             },
-            "phone_number": _record.get('phone_number')
-        }, subclient
+            "phone_number": _record.phone_number
+        }
+        return number_data, subclient
 
 
-    def new_phone_detail(self, json_data: dict = None, company_id: str = None, user_id: str = None):
+    def new_phone_detail(self, json_data: dict = None, account_id: str = None, user_id: str = None):
         phone_record, subclient = self.allocate_number(area_code=json_data['area_code'], country=json_data['country'],\
-            company_id=company_id, user_id=user_id)
+            account_id=account_id, user_id=user_id)
 
         if phone_record is None:
             return {'status':503, 'message': 'we could not allocate a phone number at this time'}
         
+        json_data.update(phone_record)
         address_requirement = phone_record.get('address_requirements')
         if address_requirement == 'none':
-            phone_status = self.instant_number_allocation(json_data=json_data, company_id=company_id, user_id=user_id, twilio_client=subclient)
+            phone_status = self.instant_number_allocation(json_data=json_data, account_id=account_id, user_id=user_id, twilio_client=subclient)
         
         else: #any, local, foreign
             message = f'Address of type {address_requirement} is required to proceed'
@@ -140,7 +162,7 @@ class Phone(object):
         return phone_status
 
 
-    def instant_number_allocation(self, json_data=None, company_id=None, user_id=None, twilio_client=None):
+    def instant_number_allocation(self, json_data=None, account_id=None, user_id=None, twilio_client=None):
         label = 'Personal Number'
         
         primary_number_availablity = db_fetch(index=phone_index, query={
@@ -176,12 +198,15 @@ class Phone(object):
             label = 'Group Number'
             json_data['members'] = []
 
-        twiml_app_sid = self.twiml_sid(twilio_client, company_id)
+        twiml_app_sid = self.twiml_sid(twilio_client, account_id)
 
-        number_provision = twilio_client.incoming_phone_numbers.create(
+        try:
+            number_provision = twilio_client.incoming_phone_numbers.create(
             phone_number=json_data.get('phone_number'),
             voice_application_sid=str(twiml_app_sid)
         )
+        except (TwilioException, TwilioRestException) as e:
+            return {"msg": str(e)}
 
         json_data.update({
             "label": f"{json_data['country']} | {label}",
@@ -192,15 +217,22 @@ class Phone(object):
             "voice_greeting_url": ''
         })
 
-        data = db_save(index=phone_index, json_data=json_data, company_id=company_id, user_id=user_id)
+        data = db_save(index=phone_index, json_data=json_data, account_id=account_id, user_id=user_id)
         if not data:
             return {'status':500, 'messgae': 'we could not provision a phone number for you at this time.'}
         return {'status': 201, 'data':data, 'message': 'new phone number provisioned.'}
 
 
-    def add_address(self, json_data=None, twilio_client=None):
+    def add_address(self, json_data=None, account_id=None):
+        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
+
+        if not account:
+            return {"msg":"empty"}
+
+        twilio_client = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
         
-        address_details = twilio_client.addresses.create(
+        try:
+            address_details = twilio_client.addresses.create(
             customer_name=json_data['customer_name'],
             street=json_data['street'],
             city=json_data['city'],
@@ -209,19 +241,40 @@ class Phone(object):
             iso_country=json_data['country'] #iso
         )
 
-        return address_details
+        except (TwilioException, TwilioRestException) as e:
+            return {"msg": str(e)}
 
-    @property
-    def addresses(self, twilio_client):
+        return {
+            "dependent_phone_numbers": address_details.dependent_phone_numbers.list(), 
+            "emergency_enabled": address_details.emergency_enabled,
+            "validated": address_details.validated,
+            "verified": address_details.verified
+        }
+
+
+    def addresses(self, account_id):
+        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
+
+        if not account:
+            return {"msg":"you do not have an active account yet. kindly purchase a phone number"}
+
+        twilio_client = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
         addresses = twilio_client.addresses.list()
-        return addresses
+    
+        data = {
+            "validated": [a.validated for a in addresses],
+            "street": [a.street for a in addresses],
+            "verified": [a.verified for a in addresses]
+            }
+
+        return data
 
 
-    @property
-    def twiml_sid(self, subclient=None, company_id=None):
-        applications = subclient.applications.list(friendly_name=f"{company_id}_TWIML_APP", limit=1)
+    @auth_checker
+    def twiml_sid(self, subclient=None, account_id=None):
+        applications = subclient.applications.list(friendly_name=f"{account_id}_TWIML_APP", limit=1)
         if not applications:
-            application = subclient.applications.create(friendly_name=f"{company_id}_TWIML_APP")
+            application = subclient.applications.create(friendly_name=f"{account_id}_TWIML_APP")
             return application.sid
         return applications[0].sid
 
