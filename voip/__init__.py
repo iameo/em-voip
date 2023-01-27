@@ -12,12 +12,13 @@ from .__version__ import version
 from routes.restx_loader import restx_api
 from flask_bcrypt import Bcrypt
 
-authorizations = {"Bearer": {"type": "apiKey", "in": "header", "name": "Authorization"}}
+from dotenv import load_dotenv
+import os
 
-api = Api(version=f'{version}', title='VOIP API', authorizations=authorizations, doc='/ui')
-cors = CORS()
+
+cors = CORS(origins=os.getenv('AllOWED_ORIGINS_CORS'))
 jwt = JWTManager()
-socketio = SocketIO(cors_allowed_origins="*")
+socketio = SocketIO(cors_allowed_origins=os.getenv('ALLOWED_ORIGINS_SOCKET'))
 bcrpyt = Bcrypt()
 
 
