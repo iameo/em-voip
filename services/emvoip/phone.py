@@ -5,6 +5,9 @@ from utils.exts import get_db_data_by_query
 from utils.auth import auth_checker
 from db import db_fetch, db_id_maker, post_data_to_db, db_save
 from datetime import datetime
+from model.response import response_model
+
+
 
 import os
 
@@ -128,8 +131,8 @@ class Phone(object):
         
         try:
             _record = record[0]
-        except (IndexError, KeyError):
-            return None
+        except (IndexError, KeyError, TypeError):
+            return None, subclient
 
         capabilities = _record.capabilities
         number_data = {
@@ -145,20 +148,23 @@ class Phone(object):
 
 
     def new_phone_detail(self, json_data: dict = None, account_id: str = None, user_id: str = None):
-        phone_record, subclient = self.allocate_number(area_code=json_data['area_code'], country=json_data['country'],\
+        try:
+            phone_record, subclient = self.allocate_number(area_code=json_data['area_code'], country=json_data['country'],\
             account_id=account_id, user_id=user_id)
-
+        except TypeError:
+            return {'message': 'something went wrong.', 'status': 500, 'data': {}}
         if phone_record is None:
-            return {'status':503, 'message': 'we could not allocate a phone number at this time'}
-        
+            return {'status':503, 'message': 'we could not allocate a phone number at this time.'}
+   
         json_data.update(phone_record)
         address_requirement = phone_record.get('address_requirements')
         if address_requirement == 'none':
             phone_status = self.instant_number_allocation(json_data=json_data, account_id=account_id, user_id=user_id, twilio_client=subclient)
         
         else: #any, local, foreign
-            message = f'Address of type {address_requirement} is required to proceed'
+            message = f"A {address_requirement} address in {json_data['country']} is required."
             phone_status = None #todo
+            return {'message': message, 'data':{}}
         return phone_status
 
 
@@ -224,21 +230,26 @@ class Phone(object):
 
 
     def add_address(self, json_data=None, account_id=None):
+        '''
+        To meet Regulatory notice for countries that request a local address\
+        before twilio number can be purchased
+        '''
         account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
 
         if not account:
-            return {"msg":"empty"}
+            return {"msg":"empty"} #base response - not bad
 
+        #initialize twilio client
         twilio_client = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
         
         try:
             address_details = twilio_client.addresses.create(
-            customer_name=json_data['customer_name'],
-            street=json_data['street'],
-            city=json_data['city'],
-            region=json_data['region'],
-            postal_code=json_data['postal_code'],
-            iso_country=json_data['country'] #iso
+                customer_name=json_data['customer_name'],
+                street=json_data['street'],
+                city=json_data['city'],
+                region=json_data['region'],
+                postal_code=json_data['postal_code'],
+                iso_country=json_data['country'] #iso
         )
 
         except (TwilioException, TwilioRestException) as e:
@@ -247,8 +258,8 @@ class Phone(object):
         return {
             "dependent_phone_numbers": address_details.dependent_phone_numbers.list(), 
             "emergency_enabled": address_details.emergency_enabled,
-            "validated": address_details.validated,
-            "verified": address_details.verified
+            "validated": address_details.validated, #false
+            "verified": address_details.verified #false
         }
 
 
