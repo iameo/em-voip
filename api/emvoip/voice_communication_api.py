@@ -17,12 +17,26 @@ from flask_restx.reqparse import RequestParser
 
 
 #argparser for swagger and voice endpoint
-auth_reqparser = RequestParser(bundle_errors=True)
-auth_reqparser.add_argument(
+
+voice_reqparser = RequestParser(bundle_errors=True)
+voice_reqparser.add_argument(
     name="From", type=str, location="form", required=True, nullable=False, default="+19253161405"
 )
-auth_reqparser.add_argument(
+voice_reqparser.add_argument(
     name="To", type=str, location="form", required=True, nullable=False, default="+2348162575674"
+)
+
+
+transfer_reqparser = RequestParser(bundle_errors=True)
+transfer_reqparser.add_argument(
+    name="From", type=str, location="form", required=True, nullable=False, default="+19253161405"
+)
+transfer_reqparser.add_argument(
+    name="To", type=str, location="form", required=True, nullable=False, default="+2348162575674"
+)
+
+transfer_reqparser.add_argument(
+    name="SID", type=str, location="form", required=True, nullable=False, default="+2348162575674"
 )
 #----- collective parsers end here
 
