@@ -273,9 +273,9 @@ class Phone(object):
         addresses = twilio_client.addresses.list()
     
         data = {
-            "validated": [a.validated for a in addresses],
-            "street": [a.street for a in addresses],
-            "verified": [a.verified for a in addresses]
+            "validated": [address.validated for address in addresses],
+            "street": [address.street for address in addresses],
+            "verified": [address.verified for address in addresses]
             }
 
         return data
