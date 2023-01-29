@@ -8,19 +8,15 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask import request, jsonify
 import jwt
 
-from routes import restx_loader
-from functools import wraps
+
 from routes.restx_loader import restx_api
 
-
-
 from flask_restx.reqparse import RequestParser
-from flask_restx.inputs import email
 
 
 
 
-
+#argparser for swagger and voice endpoint
 auth_reqparser = RequestParser(bundle_errors=True)
 auth_reqparser.add_argument(
     name="From", type=str, location="form", required=True, nullable=False, default="+19253161405"
@@ -28,12 +24,14 @@ auth_reqparser.add_argument(
 auth_reqparser.add_argument(
     name="To", type=str, location="form", required=True, nullable=False, default="+2348162575674"
 )
+#----- collective parsers end here
 
 
-
-# @route_protector(None)
 @jwt_required()
-def twilio_init(include_identity=False, block_twilio_client=False):   
+def twilio_init(include_identity=False, block_twilio_client=False):
+    '''
+    initialize twilio client by collecting relevant data through JWT
+    '''
     account_id = get_jwt_identity()['account_id']
     user_id = get_jwt_identity()['user_id']
     twilio_client = TwilioCommClient(account_id, user_id, block_twilio_client)
@@ -43,15 +41,20 @@ def twilio_init(include_identity=False, block_twilio_client=False):
 
 
 class TwilioToken(Resource):
+    @restx_api.doc(security='Bearer')
     def get(self):
         twilio_client, identity = twilio_init(include_identity=True)
         token =  twilio_client.get_twilio_token(identity=identity)
         return response_model(response=token, allow_only_data=True)
 
 
+
+
+
+#---- voice implementation flow below
 class Voice(Resource):
-    # @restx_api.expect(auth_reqparser)
-    # @restx_api.doc(security='Bearer')
+    @restx_api.expect(auth_reqparser)
+    @restx_api.doc(security='Bearer')
     @jwt_required()
     def post(self):
         twilio_client = twilio_init()
