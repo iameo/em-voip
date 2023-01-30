@@ -4,7 +4,7 @@ from bson import json_util
 import json
 
 
-def response_model(response=None, explicit_message=None, allow_only_data=False):
+def response_model(response=None, explicit_message=' ', allow_only_data=False):
     message = response.get('message', explicit_message)
 
     if response and allow_only_data:
