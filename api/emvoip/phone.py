@@ -31,6 +31,10 @@ class PhoneDetail(Resource):
         '''provision a phone number'''
         json_data = request.get_json()
         response = phone_api.new_phone_detail(json_data=json_data, user_id=get_jwt_identity()['user_id'], account_id=get_jwt_identity()['account_id'])
+        twilio_msg = response.get('msg')
+        if twilio_msg:
+            if '21404' in twilio_msg:
+                return response_model(response={"message": "this is a trial account. You need to verify a phone number before purchasing a Twilio number"}, allow_only_data=True)
         return response_model(response=response, allow_only_data=True)
 
 
