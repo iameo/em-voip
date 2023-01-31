@@ -92,9 +92,9 @@ class Phone(object):
                 friendly_name=f'{account_id}'
             )
             except TwilioRestException as e:
-                return {"msg": str(e)}
+                return None, None
             except TwilioException as e:
-                return {"msg": str(e)}
+                return None, None
             subaccount_data = {
                 "_id": db_id_maker('subaccount'),
                 "account_name": account.friendly_name,
@@ -275,7 +275,8 @@ class Phone(object):
         data = {
             "validated": [address.validated for address in addresses],
             "street": [address.street for address in addresses],
-            "verified": [address.verified for address in addresses]
+            "verified": [address.verified for address in addresses],
+            "customer_name": [address.customer_name for address in addresses],
             }
 
         return data
