@@ -67,7 +67,7 @@ class TwilioToken(Resource):
 
 #---- voice implementation flow below
 class Voice(Resource):
-    @restx_api.expect(auth_reqparser)
+    @restx_api.expect(voice_reqparser)
     @restx_api.doc(security='Bearer')
     @jwt_required()
     def post(self):
