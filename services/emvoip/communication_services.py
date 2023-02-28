@@ -1,67 +1,29 @@
-import json
-from flask_jwt_extended import get_jwt_identity
-from flask import jsonify, request, Response
-from twilio.rest import Client as TwilioClient
+from db import db_fetch, db_save, db_field
+from dotenv import load_dotenv
+from flask import request, Response
+
+from model.response import response_model
+from utils.auth import initialize_client
+from utils.communication.phone import (
+    _validate_phone,
+    country_fetcher,
+    fetch_caller_lang,
+    get_account
+    )
+
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import VoiceGrant
 from twilio.twiml.voice_response import VoiceResponse, Dial
-from db import db_fetch, db_save
-from model.response import response_model
 
-from utils.twilio_supported_langs import available_langs
-from utils.communication.phone import _validate_phone
-from services.middlewares.common import route_protector
 
 import os
 
 
+load_dotenv()
 
 
-def get_account(index="subaccounts", *, lookup=None):
-    key, value = lookup.popitem()
-    query = {
-            "query": {
-            "bool": {
-                "must": [
-                {
-                    "match_phrase": {
-                        f"{key}": f"{value}"
-                    }
-                },
-                {
-                    "match_phrase": {
-                        "is_delete": 0
-                    }
-                }
-                
-                ]
-            }
-            }
-        }  
-    try:
-        account = db_fetch(index=index, query=query)
-    except IndexError:
-        return None
-    return account
-
-
-def fetch_caller_lang(caller_country):
-    language = next((key for key in available_langs if key.endswith(str(caller_country))), None)
-    language = 'en-US' if language is None else language
-    return language
-
-
-@route_protector(None)
-def initialize_client(account_dict=True):
-    if not account_dict:
-        account_id = get_jwt_identity()['account_id']
-        account = get_account(lookup={"account_id":account_id})
-    
-    if account_dict or account:
-        return TwilioClient(account['twilio_account_sid'], account['twilio_auth_token']) 
-    
-    return {}
-
+INVALID_NUMBER_PROMPT = os.getenv('INVALID_NUMBER_PROMPT', 'The number you are calling is not valid. Please check the number and try again.')
+TWILIO_SID_SECRETS = os.getenv('TWILIO_SID_SECRETS', 'twilio_sid_secretx')
 
 
 class TwilioCommClient(object):
@@ -75,8 +37,8 @@ class TwilioCommClient(object):
         
         #block_twilio_client set to False if object requires twilio client
         if not block_twilio_client:
-            self.account = get_account(lookup={'account_id':self.account_id})
-            self.subclient, self.twilio_sid, self.twilio_auth_token = initialize_client()
+            account = get_account(lookup={'account_id':self.account_id})
+            self.subclient, self.twilio_sid, self.twilio_auth_token = initialize_client(account[0])
 
     @property
     def fetch_twilio_secrets(self):
@@ -106,7 +68,7 @@ class TwilioCommClient(object):
                 }
             }
         }
-        existing_key_secret = db_fetch(index='twilio_sid_secretx', query=query)
+        existing_key_secret = db_fetch(index=f'{TWILIO_SID_SECRETS}', query=query)
 
         if not existing_key_secret:
             subclient = self.subclient
@@ -120,7 +82,7 @@ class TwilioCommClient(object):
                 'secret': sid_secret.secret,
                 'sid': sid_secret.sid
             }
-            _ = db_save(index='twilio_sid_secretx', json_data=data, account_id=self.account_id, user_id=self.user_id)
+            _ = db_save(index=f'{TWILIO_SID_SECRETS}', json_data=data, account_id=self.account_id, user_id=self.user_id)
             return data
 
         key_secret = existing_key_secret[0]
@@ -165,24 +127,34 @@ class TwilioCommClient(object):
         caller_id = caller or request.values.get('Caller')
 
         #voice/accent locale using caller country
-        language = fetch_caller_lang(caller_country=caller_country)
+        language = country_fetcher(caller_country=caller_country)
 
         events = 'initiated ringing answered completed' #call events at any given time
         call_handler_uri = '/call/handle'
-        # call_event_uri = '/call/events'
 
-        identity = ''
+        identity = caller
 
         if caller == call_recipent:
+            #caller is same as receiver ==> hangup
             twiml.hangup()
             return Response(str(twiml), mimetype='application/xml')
+    
+        #check phone number validity before moving forward with call placement
+        contact, contact_validity = _validate_phone(call_recipent.strip(), country=caller_country)
+
+        if not contact_validity:
+            #prematurely end call if contact number is invalid
+            twiml.say(f'{INVALID_NUMBER_PROMPT}', loop=1, language=language)
+            twiml.hangup()
+            return str(twiml)
         
+
+        #incoming call
         if call_recipent in self.subaccount_contacts(twiml, call_recipent, caller_country, caller_lang, limit=4):
             dial = Dial(timeout=15, action=call_handler_uri)
             dial.client(
-                identity = identity,
+                identity = request.values.get('Caller') or identity, 
                 status_callback_event = events,
-                # status_callback = call_event_uri,
                 status_callback_method = 'POST',
             )
 
@@ -190,20 +162,12 @@ class TwilioCommClient(object):
 
             return Response(str(twiml), mimetype='application/xml')
         
+        #outgoing call
         elif call_recipent:
-            contact, contact_valid = _validate_phone(call_recipent, caller_country)
-
-            if not contact_valid:
-                twiml.say("The number dialled is not valid. Please Check the number and try again.", language=language)
-                twiml.hangup()
-                return str(twiml)
-
             dial = Dial(caller_id=caller_id)
             dial.number(
                 phone_number = contact,
-                # status_callback_event = events,
-                # status_callback = call_event_uri,
-                # status_callback_method = 'POST',
+                #need to run status callbacks: todo
             )
             
         else:
@@ -218,12 +182,6 @@ class TwilioCommClient(object):
     def subaccount_contacts(self, twiml, contact, country, language, limit=2):
 
         contacts = set()
-
-        contact, contact_validity = _validate_phone(contact.strip(), country=country)
-        if not contact_validity:
-            twiml.say('The number you are calling is not valid. Please check the number and try again.', loop=2, language=language)
-            twiml.hangup()
-            return contact
 
         subclient = self.subclient
         account_contact_list = subclient.incoming_phone_numbers.list(
@@ -258,15 +216,15 @@ class TwilioCommClient(object):
             response.hangup()
             return Response(str(response), mimetype='application/xml')
 
-        # fetch phones details
-        #contact_data = get_by_field(index='phone_details', field='phone_number', value=to, is_delete=0)
+        # fetch phones details by user
+        contact_data = db_field(index='phone_details', field='phone_number', value=to, is_delete=0)
         if not contact_data:
             #catch error => hang up the call
             response.say('There was an issue connecting your call at this time. Goodbye!', language=language)
             response.hangup()
             return Response(str(response), mimetype='application/xml')
 
-        # get agent preferences
+        # get agent preferences - values such as forward_to, voice_greeting_url, etc
         contact_data = contact_data[0]
         is_forward = contact_data.get('forward_to_enabled')
         forward_to = contact_data.get('forward_to')
@@ -289,7 +247,8 @@ class TwilioCommClient(object):
             response.say("this call will be forwarded to another number, please stay on the line.", language=language)
             response.dial(forward_to, record='record-from-ringing-dual' if bool(is_record) else 'false', action='/call/end')
 
-        elif call_status == 'completed': response.hangup()
+        elif call_status == 'completed': 
+            response.hangup()
         
         elif (bool(is_forward) == False or call_status == "busy" or call_status == 'no-answer') and bool(is_greeting):
             response.play(voicemail_greeting, loop=1)
@@ -323,9 +282,12 @@ class TwilioCommClient(object):
 
     @staticmethod
     def purchased_numbers():
-        subclient = initialize_client()[0]
-        numbers_owned = subclient.incoming_phone_numbers.list(limit=5)
-        return {'v':numbers_owned}
+        #function now handled by Phone
+        pass
+
+        # subclient = initialize_client()[0]
+        # numbers_owned = subclient.incoming_phone_numbers.list(limit=5)
+        # return {'numbers':numbers_owned}
 
     
     def check_account_status(self):
