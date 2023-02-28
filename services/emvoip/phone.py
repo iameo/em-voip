@@ -7,9 +7,13 @@ from db import db_fetch, db_id_maker, post_data_to_db, db_save
 from datetime import datetime
 from model.response import response_model
 
-
-
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+
 
 main_account_sid = os.getenv('TWILIO_ACCOUNT_SID')
 main_account_auth_token = os.getenv('TWILIO_AUTH_TOKEN')
@@ -19,6 +23,7 @@ Client = TwilioClient(main_account_sid, main_account_auth_token)
 
 #------ index for db hits and saves
 phone_index = 'phone_repo'
+SUBACCOUNT_INDEX = os.getenv('SUBACCOUNT_INDEX', 'subaccountsx')
 
 class Phone(object):
     @auth_checker
@@ -29,11 +34,11 @@ class Phone(object):
         except (ValueError, TypeError):
             n = None
 
-        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
+        account = get_db_data_by_query(index=f'{SUBACCOUNT_INDEX}', search_parameter={"account_id":account_id})
         if account:
             subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
         else:
-            return {"msg": "you are yet to subscribe for a plan"}
+            return {"msg": "you are yet to subscribe to a plan"}
 
         numbers = subclient.incoming_phone_numbers.list(limit=n)
         return {'numbers': c.phone_number for c in numbers} if numbers else {"numbers": []}
@@ -80,7 +85,7 @@ class Phone(object):
         """
         Buy phone number and allocate twilio twiml url for voice calls
         """
-        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
+        account = get_db_data_by_query(index=f'{SUBACCOUNT_INDEX}', search_parameter={"account_id":account_id})
 
         if account:
             account = account
@@ -117,7 +122,7 @@ class Phone(object):
             }
 
             #save to db
-            post_data_to_db(index="subaccounts", json_data=subaccount_data)
+            post_data_to_db(index="subaccountsx", json_data=subaccount_data)
             account = {"twilio_account_sid": subaccount_data['twilio_account_sid'], 'twilio_auth_token': subaccount_data['twilio_auth_token']}
         
         subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
