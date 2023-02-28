@@ -5,4 +5,4 @@
 
 ![EmVoip Web: profile](https://github.com/iameo/em-voip/blob/main/voip/imgs/profile.png)
 
-![Twilio Console](https://github.com/iameo/em-voip/blob/main/voip/imgs/twitter_console.png)
+![Twilio Console](https://github.com/iameo/em-voip/blob/main/voip/imgs/twilio_console.png)
