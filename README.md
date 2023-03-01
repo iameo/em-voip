@@ -7,4 +7,6 @@
 
 ![EmVoip Web: profile](https://github.com/iameo/em-voip/blob/main/voip/imgs/profile.png)
 
+
+###### Checking Call Logic and logs: Busy, No Answer, Completed, and Failed
 ![Twilio Console](https://github.com/iameo/em-voip/blob/main/voip/imgs/twilio_console.png)
