@@ -1,5 +1,6 @@
 "# em-voip" 
 
+Microservice that serves VoIP functionalities for your application!
 
 
 #### .ENV
