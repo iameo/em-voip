@@ -9,5 +9,5 @@ class Index(Resource):
     def get(self):
         return jsonify({
                 "status": _status.HTTP_200_OK,
-                "message": "fetchedd successfully",
+                "message": "fetched successfully",
             })
