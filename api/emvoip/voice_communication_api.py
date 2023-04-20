@@ -57,6 +57,7 @@ def twilio_init(include_identity=False, block_twilio_client=False):
 class TwilioToken(Resource):
     @restx_api.doc(security='Bearer')
     def get(self):
+        '''get twilio token for the allocated twilio resources'''
         twilio_client, identity = twilio_init(include_identity=True)
         token =  twilio_client.get_twilio_token(identity=identity)
         return response_model(response=token, allow_only_data=True)
