@@ -29,11 +29,10 @@ auth_reqparser.add_argument(
 )
 
 def allow_login(json_data):
-    email = json_data.get('email')
-    password = json_data.get('password')
+    email = request.form['email'] or json_data.get_json().get('email')
+    password = request.form['password'] or json_data.get_json().get('password')
 
     response = db_field(index=users_index, field='email', value=email)
-
     if response:
         response_ = response[0]
         check_password = bcrypt.checkpw(password=password.encode('utf8'), hashed_password=response[0]['password'].encode('utf8'))
@@ -62,7 +61,7 @@ def allow_login(json_data):
 class AllowLogin(Resource):
     @auth_ns.expect(auth_reqparser)
     def post(self):
-        auth_data = request.get_json()
+        auth_data = request
         resp = allow_login(auth_data)
         status = str(resp.pop('status'))
         if '200' in status:
@@ -117,7 +116,7 @@ def register_user(json_data):
             }
         }
         status = db_save(index=users_index, user_id=user_id, account_id=account_id, json_data=data)
-    return status
+    return {'response': status}
 
 
 class AllowRegister(Resource):
