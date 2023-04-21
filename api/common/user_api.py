@@ -28,9 +28,23 @@ auth_reqparser.add_argument(
     name="password", type=str, location="form", required=True, nullable=False
 )
 
+
+auth_reqparser_reg = RequestParser(bundle_errors=True)
+auth_reqparser_reg.add_argument(
+    name="email", type=email(), location="form", required=True, nullable=False
+)
+auth_reqparser_reg.add_argument(
+    name="password", type=str, location="form", required=True, nullable=False
+)
+auth_reqparser_reg.add_argument(
+    name="name", type=str, location="form", required=True, nullable=False
+)
+
 def allow_login(json_data):
-    email = request.form['email'] or json_data.get_json().get('email')
-    password = request.form['password'] or json_data.get_json().get('password')
+    # print("000000000")
+    email =  request.form.get('email', json_data.get_json().get('email'))
+    password = request.form.get('password', json_data.get_json().get('password'))
+    
 
     response = db_field(index=users_index, field='email', value=email)
     if response:
@@ -71,8 +85,11 @@ class AllowLogin(Resource):
 
 
 def register_user(json_data):
-    email = json_data.get('email')
-    b_password = json_data.get('password').encode('utf-8')
+    
+    email =  request.form.get('email', json_data.get_json().get('email'))
+    password = request.form.get('password', json_data.get_json().get('password'))
+    b_password = password.encode('utf8')
+    name = request.form.get('name', json_data.get_json().get('name'))
 
     response = db_field(index=users_index, field='email', value=email)
 
@@ -84,8 +101,6 @@ def register_user(json_data):
         account_id = random_label(prefix="account", n=18)
         user_id = random_label(prefix='user', n=18)
         salt = bcrypt.gensalt()
-
-        name =  json_data.get('name')
         
         access_token = create_access_token(identity={
                     'name': name,
@@ -120,7 +135,10 @@ def register_user(json_data):
 
 
 class AllowRegister(Resource):
+    @auth_ns.expect(auth_reqparser_reg)
     def post(self):
-        data = request.get_json()
+        data = request
+        print(data, "-----------")
+        # print(request.form['email'], "DDDDdddddddddd")
         resp = register_user(data)
         return response_model(allow_only_data=True, response=resp) 
