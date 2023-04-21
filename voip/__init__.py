@@ -16,7 +16,10 @@ from dotenv import load_dotenv
 import os
 
 
-cors = CORS(origins=os.getenv('AllOWED_ORIGINS_CORS'))
+
+origins_cors = os.getenv('AllOWED_ORIGINS_CORS')
+
+cors = CORS(resources={r"/*": {"origins": f"{origins_cors}"}})
 jwt = JWTManager()
 socketio = SocketIO(cors_allowed_origins=os.getenv('ALLOWED_ORIGINS_SOCKET'))
 bcrpyt = Bcrypt()
