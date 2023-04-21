@@ -13,6 +13,7 @@ def after_request(response):
   response.headers.add('Access-Control-Allow-Origin', '*')
   response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Origin, Accept, Authorization')
   response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,LINK,UNLINK,COPY,LOCK,UNLOCK,PATCH')
+  response.access_control_allow_credentials = True
   return response
 
 
