@@ -138,7 +138,6 @@ class AllowRegister(Resource):
     @auth_ns.expect(auth_reqparser_reg)
     def post(self):
         data = request
-        print(data, "-----------")
         # print(request.form['email'], "DDDDdddddddddd")
         resp = register_user(data)
         return response_model(allow_only_data=True, response=resp) 
