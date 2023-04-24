@@ -2,6 +2,7 @@
 
 Microservice that serves VoIP functionalities for your application!
 
+'application/json' is expected. Hence, for testing Postman is ideal.
 
 #### .ENV
 APP_TYPE = 'STAGE' #default
