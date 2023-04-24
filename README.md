@@ -38,7 +38,7 @@ ELASTIC_SEARCH_PASSWORD = xxxxx
 
 ###### --- mongo
 
-MONGO_LOCAL = 'http://localhost:27071'
+MONGO_LOCAL = 'http://localhost:27017'
 
 MONGO_DB_CLIENT = 'mongodb+srv:xxxxxxxx'
 
