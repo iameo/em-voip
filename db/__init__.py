@@ -1,46 +1,44 @@
+from datetime import datetime
+from elasticsearch import Elasticsearch, helpers
 from pymongo import MongoClient
 from pymongo.operations import UpdateOne
-from elasticsearch import Elasticsearch, helpers
+import timeago
 import traceback
-from datetime import datetime
-import uuid
 import os
 
+from utils.db import db_id_maker, str_converter
 
-from .stash.inventory import str_converter
 
 
 endpoint_es = os.getenv('ELASTIC_SEARCH_ENDPOINT')
 es_user = os.getenv('ELASTIC_SEARCH_USERNAME')
 es_pwd = os.getenv('ELASTIC_SEARCH_PASSWORD')
+
 ELASTIC_SEARCH_CLOUD_ID = os.getenv('ELASTIC_SEARCH_CLOUD_ID')
 ELASTIC_SEARCH_ENDPOINT = os.getenv('ELASTIC_SEARCH_ENDPOINT')
 
 MONGO_DB_CLIENT = os.getenv('MONGO_DB_CLIENT', 'mongodb://127.0.0.1/27017')
-mongo_endpoint_local = os.getenv('MONGO_LOCAL')
+mongo_endpoint_local = 'mongodb://127.0.0.1/27017'
 
-DEBUG = os.getenv('FLASK_DEBUG', True)
 
+DEBUG = int(os.getenv("FLASK_DEBUG", 1))
 
 if not DEBUG:
-    es = Elasticsearch(cloud_id=f'{ELASTIC_SEARCH_CLOUD_ID}', 
+    es = Elasticsearch(f'{ELASTIC_SEARCH_CLOUD_ID}', 
     http_auth=(f'{es_user}', f'{es_pwd}'))
 
-    client = MongoClient()
+    client = MongoClient(MONGO_DB_CLIENT)
 else:
     es = Elasticsearch([ELASTIC_SEARCH_ENDPOINT])
     client = MongoClient(mongo_endpoint_local)
 
-db_ = os.getenv('Mongo_DOC',  client.test.testr) #client.xxx.xxx
+print(es.ping(), "elasticsearch pinging..........")
+db_ = client.test.testr #client.xxx.xxx
 
 
 
-def db_id_maker(title):
-    #generate a UUID hex file with given title
-    return f"{title}__{uuid.uuid4().hex}"
 
-
-def db_fetch(index, id=None, query=None, agg=False, exclude=False):
+def db_fetch(index, id=None, query=None, agg=False, exclude=[]):
     if query:
         query["from"] = query.get('from', 0)
         #set default size if None
@@ -61,12 +59,13 @@ def db_fetch(index, id=None, query=None, agg=False, exclude=False):
             return data
         else:
             #log this - ping to check elasticsearch instance is running
-            print(es.ping())
+            print(es.ping(), "id not not attached")
 
+            data = None
             #create a new index with index and ignore ERROR 400
             es.indices.create(index=index, ignore=400)
             try:
-                data = es.search(index=index, body=query)
+                data = es.search(index=index, body=query, ignore=[400,404])
             except Exception as e:
                 #log
                 print(str(e), "<<<<>>>>>")
@@ -80,6 +79,7 @@ def db_fetch(index, id=None, query=None, agg=False, exclude=False):
 
 def post_data_to_db(index=None, json_data={}, err_msg=False):
     table = db_.db[index]
+    # print(table, index, "kkkkkkkkk")
     if isinstance(json_data, dict):
         try:
             _ = table.insert_one(json_data)
@@ -87,7 +87,7 @@ def post_data_to_db(index=None, json_data={}, err_msg=False):
             try:
                 es.index(index=index, id=json_data['id'], body=json_data, refresh='wait_for')
             except Exception as e:
-                print(">>>>>>", str(e))
+                print(">>>>>>", str(e))  #fuck around and find out
             return json_data
         except Exception as e:
             if err_msg:
@@ -149,7 +149,7 @@ def put_data_in_db(index=None, json_data=None, want_data=True, err_msg=False, on
 def db_field(index=None, field=None, value=None):
     q_array = [{
             "match_phrase": {
-            field: value
+                    field: value
                 }
             }]
     json_query = {
@@ -158,10 +158,8 @@ def db_field(index=None, field=None, value=None):
             "must": q_array
                 }
             },
-            'from':0,
-            'size':10000
+        'from':0,
+        'size':10000
     }
     return db_fetch(index=index, query=json_query)
-
-
 
