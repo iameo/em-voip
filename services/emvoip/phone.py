@@ -23,7 +23,7 @@ Client = TwilioClient(main_account_sid, main_account_auth_token)
 
 #------ index for db hits and saves
 phone_index = 'phone_repo'
-SUBACCOUNT_INDEX = os.getenv('SUBACCOUNT_INDEX', 'subaccountsx')
+SUBACCOUNT_INDEX = os.getenv('SUBACCOUNT_INDEX', 'subaccountz')
 
 class Phone(object):
     @auth_checker
@@ -147,7 +147,8 @@ class Phone(object):
                 "sms": capabilities['SMS'],
                 "voice": capabilities['voice']
             },
-            "phone_number": _record.phone_number
+            "phone_number": _record.phone_number,
+            "is_shared": 1
         }
         return number_data, subclient
 
@@ -242,7 +243,7 @@ class Phone(object):
         account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
 
         if not account:
-            return {"msg":"empty"} #base response - not bad
+            return {"message":"account do not owe a number to assign this address to"} #base response - not bad
 
         #initialize twilio client
         twilio_client = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
@@ -258,7 +259,7 @@ class Phone(object):
         )
 
         except (TwilioException, TwilioRestException) as e:
-            return {"msg": str(e)}
+            return {"message": str(e)}
 
         return {
             "dependent_phone_numbers": address_details.dependent_phone_numbers.list(), 
