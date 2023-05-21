@@ -231,7 +231,7 @@ class Phone(object):
 
         data = db_save(index=phone_index, json_data=json_data, account_id=account_id, user_id=user_id)
         if not data:
-            return {'status':500, 'messgae': 'we could not provision a phone number for you at this time.'}
+            return {'status':500, 'message': 'we could not provision a phone number for you at this time.'}
         return {'status': 201, 'data':data, 'message': 'new phone number provisioned.'}
 
 
