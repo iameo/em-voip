@@ -16,3 +16,5 @@ class Config(object):
     DEBUG = os.getenv('DEBUG', False)
     JWT_TOKEN_LOCATION = ['headers', 'query_string']
 
+    SERVER_NAME = 'localhost:80'
+
