@@ -72,6 +72,9 @@ class Voice(Resource):
     @restx_api.doc(security='Bearer')
     @jwt_required()
     def post(self):
+        """
+        Handles the call logic
+        """
         twilio_client = twilio_init()
         return twilio_client.voice()
 
