@@ -68,7 +68,7 @@ class Address(Resource):
         address_data = request.get_json()
         account_id = get_jwt_identity()['account_id']
         results = phone_api.add_address(address_data, account_id)
-        return response_model(response=results, allow_only_data=True)
+        return response_model(response=results)
 
     # @ns.doc(security="Bearer")
     @restx_api.doc(security="Bearer")
@@ -77,4 +77,4 @@ class Address(Resource):
         '''view all saved addresses'''
         account_id = get_jwt_identity()['account_id']
         results = phone_api.addresses(account_id)
-        return response_model(response=results, allow_only_data=True)
+        return response_model(response=results)
