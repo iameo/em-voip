@@ -11,11 +11,13 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 phone_api = Phone()
 
+
 class PhoneRequestCountries(Resource):
     def get(self):
         '''Get all available countries to purchase a number from at any given time'''
         response = phone_api.request_countries()
         return response_model(response, allow_only_data=True)
+
 
 class PhoneRequestPricing(Resource):
     @ns.param('country','check pricing for this country (example: US)')
@@ -24,6 +26,7 @@ class PhoneRequestPricing(Resource):
         country = request.args.get('country')
         response = phone_api.request_number_pricing(country=country)
         return response_model(response=response)
+
 
 class PhoneDetail(Resource):
     @jwt_required()
@@ -35,8 +38,7 @@ class PhoneDetail(Resource):
         if twilio_msg:
             if '21404' in twilio_msg:
                 return response_model(response={"message": "this is a trial account. You need to verify a phone number before purchasing a Twilio number"}, allow_only_data=True)
-        return response_model(response=response, allow_only_data=True)
-
+        return response_model(response=response)
 
 
 #argparser
@@ -56,8 +58,7 @@ class PurchasedNumbers(Resource):
         account_id = get_jwt_identity()['account_id']
         purchased_numbers = phone_api.purchased_numbers(n, account_id=account_id)
         return response_model(response=purchased_numbers, allow_only_data=True)
-
-
+    
 
 class Address(Resource):
     @restx_api.doc(security="Bearer")
