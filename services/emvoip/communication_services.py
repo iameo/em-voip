@@ -14,7 +14,7 @@ from utils.communication.phone import (
 from twilio.jwt.access_token import AccessToken
 from twilio.jwt.access_token.grants import VoiceGrant
 from twilio.twiml.voice_response import VoiceResponse, Dial
-
+from twilio.rest import Client as TwilioClient
 
 import os
 
@@ -23,8 +23,9 @@ load_dotenv()
 
 
 INVALID_NUMBER_PROMPT = os.getenv('INVALID_NUMBER_PROMPT', 'The number you are calling is not valid. Please check the number and try again.')
-TWILIO_SID_SECRETS = os.getenv('TWILIO_SID_SECRETS', 'twilio_sid_secretx')
+TWILIO_SID_SECRETS = os.getenv('TWILIO_SID_SECRETS', 'twilio_sid_secrettz')
 
+SUBACCOUNT_INDEX = os.getenv('SUBACCOUNT_INDEX', 'subaccountsx')
 
 class TwilioCommClient(object):
     def __init__(self, account_id, user_id, block_twilio_client=False):
@@ -38,7 +39,11 @@ class TwilioCommClient(object):
         #block_twilio_client set to False if object requires twilio client
         if not block_twilio_client:
             account = get_account(lookup={'account_id':self.account_id})
-            self.subclient, self.twilio_sid, self.twilio_auth_token = initialize_client(account[0])
+            if account:
+                self.subclient, self.twilio_sid, self.twilio_auth_token = initialize_client(account[0])
+            else:
+                self.subclient, self.twilio_sid, self.twilio_auth_token = TwilioClient(os.getenv('TWILIO_ACCOUNT_SID'), os.getenv('TWILIO_AUTH_TOKEN')), os.getenv('TWILIO_ACCOUNT_SID'), os.getenv('TWILIO_AUTH_TOKEN')
+
 
     @property
     def fetch_twilio_secrets(self):
@@ -116,7 +121,7 @@ class TwilioCommClient(object):
     def voice(self):
         twiml = VoiceResponse()
 
-        twilio_account_sid = request.values.get('AccountSid')
+        # twilio_account_sid = request.values.get('AccountSid')
         caller_country = request.values.get('CallerCountry')
 
         caller_lang = fetch_caller_lang(caller_country)
@@ -150,7 +155,7 @@ class TwilioCommClient(object):
         
 
         #incoming call
-        if call_recipent in self.subaccount_contacts(twiml, call_recipent, caller_country, caller_lang, limit=4):
+        if call_recipent in self.subaccount_contacts(twiml, call_recipent, limit=4):
             dial = Dial(timeout=15, action=call_handler_uri)
             dial.client(
                 identity = request.values.get('Caller') or identity, 
@@ -179,7 +184,7 @@ class TwilioCommClient(object):
 
 
 
-    def subaccount_contacts(self, twiml, contact, country, language, limit=2):
+    def subaccount_contacts(self, contact, limit=2):
 
         contacts = set()
 
