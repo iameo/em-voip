@@ -2,7 +2,12 @@ from db import db_fetch
 
 from utils.twilio_supported_langs import available_langs
 
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+SUBACCOUNT_INDEX = os.getenv('SUBACCOUNT_INDEX', 'subaccountsx')
 
 
 def _validate_phone(contact, country=None):
@@ -47,7 +52,7 @@ def phone_number_parser(contact, country=None):
 
 
 
-def get_account(index="subaccounts", *, lookup=None):
+def get_account(index=SUBACCOUNT_INDEX, *, lookup=None):
     key, value = lookup.popitem()
     query = {
             "query": {
