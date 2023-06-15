@@ -2,7 +2,6 @@ from datetime import datetime
 from elasticsearch import Elasticsearch, helpers
 from pymongo import MongoClient
 from pymongo.operations import UpdateOne
-import timeago
 import traceback
 import os
 
@@ -24,10 +23,15 @@ mongo_endpoint_local = 'mongodb://127.0.0.1/27017'
 DEBUG = int(os.getenv("FLASK_DEBUG", 1))
 
 if not DEBUG:
-    es = Elasticsearch(f'{ELASTIC_SEARCH_CLOUD_ID}', 
+    es = Elasticsearch(cloud_id=f'{ELASTIC_SEARCH_CLOUD_ID}', 
     http_auth=(f'{es_user}', f'{es_pwd}'))
 
     client = MongoClient(MONGO_DB_CLIENT)
+    try:
+        client.admin.command('ping')
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        print(str(e), "MONGO CONNECT")
 else:
     es = Elasticsearch([ELASTIC_SEARCH_ENDPOINT])
     client = MongoClient(mongo_endpoint_local)
@@ -47,7 +51,7 @@ def db_fetch(index, id=None, query=None, agg=False, exclude=[]):
         if exclude and '_source' in query:
             query['_source'][exclude] = exclude
         else:
-            query['_source'] = {'exclude': exclude}
+            query['_source'] = {'excludes': exclude}
 
 
     try:
@@ -162,4 +166,78 @@ def db_field(index=None, field=None, value=None):
         'size':10000
     }
     return db_fetch(index=index, query=json_query)
+
+
+
+def db_save(index, user_id, account_id, json_data, lead_id=None, pipeline_id=None, contact_id=None):
+    """
+    db_save: save data to the DB
+    
+    args:
+        index: table index being accessed
+        account_id: the account currently accessing the function
+        json_data: data that requires saving
+    """
+    time_date = datetime.utcnow()
+    fixed_json = {
+        'modified_by': user_id,
+        'modified': time_date
+    }
+             
+
+    if 'is_archived' in json_data:
+        is_archived = json_data['is_archived']
+        _ =  json_data.pop('is_archived')
+    else:
+        is_archived = 0
+
+    if 'is_shared' in json_data:
+        is_shared = json_data['is_shared']
+        _ = json_data.pop('is_shared')
+    else:
+        is_shared = 1
+
+    if 'status' in json_data:
+        status = json_data['status']
+        _ = json_data.pop('status')
+    else:
+        status = 1
+
+    fixed_json_post =  {
+        'status': status,
+        'is_delete': 0,
+        'is_archived': is_archived,
+        'is_shared': is_shared,
+        'created': time_date,
+        'company_id': account_id,
+        'user_id': user_id
+    }
+
+    if '_id' not in json_data:
+        fixed_json_post['_id'] = db_id_maker(index)
+
+    fixed_json.update(fixed_json_post)
+    json_data.update(fixed_json)
+
+    return post_data_to_db(index=index,json_data=json_data)
+
+
+
+def delete_from_db(index=None, id=None, user_id=None):
+    """
+    function to delete data by id and index'
+    
+    args:
+        index: index of table
+        id: id of data
+        user_id: user currently accessing the function
+    """
+    json_data = {
+        'modified_by': user_id,
+        'modified_ts': datetime.utcnow(),
+        'is_delete': 1
+    }
+    return put_data_in_db(index=index, json_data=json_data, id=id)
+
+
 
