@@ -17,7 +17,7 @@ import os
 
 origins_cors = os.getenv('AllOWED_ORIGINS_CORS')
 
-cors = CORS(resources={r"/*": {"origins": f"{origins_cors}"}})
+cors = CORS(resources={r"/*": {"origins": "*"}})
 jwt = JWTManager()
 socketio = SocketIO(cors_allowed_origins=os.getenv('ALLOWED_ORIGINS_SOCKET'))
 bcrpyt = Bcrypt()
@@ -27,7 +27,7 @@ bcrpyt = Bcrypt()
 def create_app(config_class=Config, settings_override=None):
     app = Flask(__name__, template_folder='templates', static_folder='staticFiles')
     app.config.from_object(config_class)
-    app.config['CORS_HEADERS'] = 'application/json'
+    # app.config['CORS_HEADERS'] = 'application/json'
 
     #initialize packages
     cors.init_app(app)
