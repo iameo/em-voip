@@ -21,7 +21,7 @@ elasticsearch==7.17.6
 elasticsearch-dsl==7.4.0
 exceptiongroup==1.1.1
 Faker==14.1.0
-flake8==6.0.0
+# flake8==6.0.0
 Flask==2.1.2
 Flask-API==3.0.post1
 Flask-Bcrypt==1.0.1
