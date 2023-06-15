@@ -42,9 +42,8 @@ auth_reqparser_reg.add_argument(
 
 def allow_login(json_data):
     email =  json_data.get_json().get('email')
-    password = json_data.get_json().get('password')
+    password = json_data.get_json().get('password', 'love')
     
-
     response = db_field(index=users_index, field='email', value=email)
     if response:
         response_ = response[0]
