@@ -13,7 +13,7 @@ from datetime import datetime
 from flask_restx.reqparse import RequestParser
 from flask_restx.inputs import email
 
-
+from flask_cors import cross_origin
 auth_ns = Namespace(name="auth", validate=True)
 
 users_index = os.getenv('USERS_INDEX', 'users')
@@ -41,9 +41,8 @@ auth_reqparser_reg.add_argument(
 )
 
 def allow_login(json_data):
-    # print("000000000")
-    email =  request.form.get('email', json_data.get_json().get('email'))
-    password = request.form.get('password', json_data.get_json().get('password'))
+    email =  json_data.get_json().get('email')
+    password = json_data.get_json().get('password')
     
 
     response = db_field(index=users_index, field='email', value=email)
@@ -73,7 +72,6 @@ def allow_login(json_data):
 
 
 class AllowLogin(Resource):
-    @auth_ns.expect(auth_reqparser)
     def post(self):
         auth_data = request
         resp = allow_login(auth_data)
@@ -83,13 +81,11 @@ class AllowLogin(Resource):
         return response_model(response=resp, explicit_message='User could not be found')
 
 
-
 def register_user(json_data):
-    
-    email =  request.form.get('email', json_data.get_json().get('email'))
-    password = request.form.get('password', json_data.get_json().get('password'))
+    email =  json_data.get_json().get('email')
+    password = json_data.get_json().get('password')
     b_password = password.encode('utf8')
-    name = request.form.get('name', json_data.get_json().get('name'))
+    name = json_data.get_json().get('name')
 
     response = db_field(index=users_index, field='email', value=email)
 
@@ -135,9 +131,7 @@ def register_user(json_data):
 
 
 class AllowRegister(Resource):
-    @auth_ns.expect(auth_reqparser_reg)
     def post(self):
         data = request
-        # print(request.form['email'], "DDDDdddddddddd")
         resp = register_user(data)
         return response_model(allow_only_data=True, response=resp) 
