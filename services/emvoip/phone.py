@@ -23,7 +23,8 @@ Client = TwilioClient(main_account_sid, main_account_auth_token)
 
 #------ index for db hits and saves
 phone_index = 'phone_repo'
-SUBACCOUNT_INDEX = os.getenv('SUBACCOUNT_INDEX', 'subaccountz')
+
+SUBACCOUNT_INDEX = os.getenv('SUBACCOUNT_INDEX', 'subaccountsx')
 
 class Phone(object):
     @auth_checker
@@ -38,10 +39,10 @@ class Phone(object):
         if account:
             subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
         else:
-            return {"msg": "you are yet to subscribe to a plan"}
+            return {"data": "you are yet to subscribe to a plan. However, there's a test number allocated below (Start Device)"}
 
         numbers = subclient.incoming_phone_numbers.list(limit=n)
-        return {'numbers': c.phone_number for c in numbers} if numbers else {"numbers": []}
+        return {'data': c.phone_number for c in numbers} if numbers else {"data": []}
 
 
     @auth_checker
@@ -122,17 +123,24 @@ class Phone(object):
             }
 
             #save to db
-            post_data_to_db(index="subaccountsx", json_data=subaccount_data)
+            post_data_to_db(index=SUBACCOUNT_INDEX, json_data=subaccount_data)
             account = {"twilio_account_sid": subaccount_data['twilio_account_sid'], 'twilio_auth_token': subaccount_data['twilio_auth_token']}
         
-        subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
+        try:
+            subclient = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
+        except Exception as e:
+            return {"message": str(e)}
 
+        record = []
 
         if country and area_code:
             record = subclient.available_phone_numbers(country).local.list(area_code=area_code, limit=1)
 
         if country and not area_code:
             record = subclient.available_phone_numbers(country).local.list(limit=1)
+        
+        if record == []:
+            return record, subclient
         
         try:
             _record = record[0]
@@ -159,9 +167,13 @@ class Phone(object):
             account_id=account_id, user_id=user_id)
         except TypeError:
             return {'message': 'something went wrong.', 'status': 500, 'data': {}}
+        
         if phone_record is None:
-            return {'status':503, 'message': 'we could not allocate a phone number at this time.'}
-   
+            return {'message': 'we could not allocate a phone number at this time.', 'status':503}
+
+        if phone_record == []:
+            return {'message': f"you may have entered an invalid area code ({json_data['area_code']}) for this country ({json_data['country']}). kindly check your area code"}
+
         json_data.update(phone_record)
         address_requirement = phone_record.get('address_requirements')
         if address_requirement == 'none':
@@ -240,10 +252,10 @@ class Phone(object):
         To meet Regulatory notice for countries that request a local address\
         before twilio number can be purchased
         '''
-        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
+        account = get_db_data_by_query(index=SUBACCOUNT_INDEX, search_parameter={"account_id":account_id})
 
         if not account:
-            return {"message":"account do not owe a number to assign this address to"} #base response - not bad
+            return {"message":"account do not own a number to assign this address to", } #base response - not bad
 
         #initialize twilio client
         twilio_client = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
@@ -262,30 +274,46 @@ class Phone(object):
             return {"message": str(e)}
 
         return {
-            "dependent_phone_numbers": address_details.dependent_phone_numbers.list(), 
-            "emergency_enabled": address_details.emergency_enabled,
-            "validated": address_details.validated, #false
-            "verified": address_details.verified #false
+            "data": {
+                "dependent_phone_numbers": address_details.dependent_phone_numbers.list(), 
+                "emergency_enabled": address_details.emergency_enabled,
+                "validated": address_details.validated, #false
+                "verified": address_details.verified #false
+            },
+            "message": 'created successfully',
+            "status": 201
+
         }
 
 
     def addresses(self, account_id):
-        account = get_db_data_by_query(index="subaccounts", search_parameter={"account_id":account_id})
+        account = get_db_data_by_query(index=SUBACCOUNT_INDEX, search_parameter={"account_id":account_id})
 
         if not account:
-            return {"msg":"you do not have an active account yet. kindly purchase a phone number"}
-
+            return {
+                "data": {},
+                "message":"you do not have an active account yet. kindly purchase a phone number"
+                }
+        
         twilio_client = TwilioClient(account['twilio_account_sid'], account['twilio_auth_token'])
         addresses = twilio_client.addresses.list()
+
+
+        if not addresses:
+            return {'message': []}
     
-        data = {
-            "validated": [address.validated for address in addresses],
-            "street": [address.street for address in addresses],
-            "verified": [address.verified for address in addresses],
-            "customer_name": [address.customer_name for address in addresses],
+        results = {
+            "data": {
+                "validated": [address.validated for address in addresses],
+                "street": [address.street for address in addresses],
+                "verified": [address.verified for address in addresses],
+                "customer_name": [address.customer_name for address in addresses],
+            },
+            "message": 'fetched successfully',
+            "status": 200
             }
 
-        return data
+        return results
 
 
     @auth_checker
