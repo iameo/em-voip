@@ -1,5 +1,4 @@
 from services.emvoip.external_phone_services import request_ext_countries
-from flask import jsonify
 from flask_restx import Resource
 
 from model.response import response_model
