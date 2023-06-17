@@ -5,7 +5,6 @@ from utils.exts import get_db_data_by_query
 from utils.auth import auth_checker
 from db import db_fetch, db_id_maker, post_data_to_db, db_save
 from datetime import datetime
-from model.response import response_model
 
 import os
 from dotenv import load_dotenv
