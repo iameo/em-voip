@@ -1,8 +1,5 @@
 from pycountry import countries
 from phonenumbers import COUNTRY_CODE_TO_REGION_CODE
-from flask import jsonify
-import json
-from bson import json_util
 
 
 countries_code = {}
