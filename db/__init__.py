@@ -14,13 +14,13 @@ es_user = os.getenv('ELASTIC_SEARCH_USERNAME')
 es_pwd = os.getenv('ELASTIC_SEARCH_PASSWORD')
 
 ELASTIC_SEARCH_CLOUD_ID = os.getenv('ELASTIC_SEARCH_CLOUD_ID')
-ELASTIC_SEARCH_ENDPOINT = os.getenv('ELASTIC_SEARCH_ENDPOINT')
+ELASTIC_SEARCH_ENDPOINT = os.getenv('ELASTIC_SEARCH_ENDPOINT', 'http://127.0.0.1:9200')
 
 MONGO_DB_CLIENT = os.getenv('MONGO_DB_CLIENT', 'mongodb://127.0.0.1/27017')
 mongo_endpoint_local = 'mongodb://127.0.0.1/27017'
 
 
-DEBUG = int(os.getenv("FLASK_DEBUG", 1))
+DEBUG = int(os.getenv("FLASK_DEBUG", 0))
 
 if not DEBUG:
     es = Elasticsearch(cloud_id=f'{ELASTIC_SEARCH_CLOUD_ID}', 
