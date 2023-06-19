@@ -22,7 +22,7 @@ elasticsearch-dsl==7.4.0
 exceptiongroup==1.1.1
 Faker==14.1.0
 # flake8==6.0.0
-Flask==2.1.2
+Flask
 Flask-API==3.0.post1
 Flask-Bcrypt==1.0.1
 Flask-Cors==3.0.10
@@ -106,6 +106,6 @@ twine==4.0.2
 typing_extensions==4.3.0
 urllib3==1.26.12
 webencodings==0.5.1
-Werkzeug==2.1.2
+Werkzeug
 wsproto==1.2.0
 zipp==3.8.1
